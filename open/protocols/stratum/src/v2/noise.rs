@@ -230,7 +230,7 @@ impl handshake::Step for Responder {
             0 => handshake::StepResult::ReceiveMessage,
             1 => {
                 // <- e
-                let in_msg = in_msg.ok_or(ErrorKind::Noise("No message arrived".to_string()))?;
+                let in_msg = in_msg.ok_or(Error::Noise("No message arrived".to_string()))?;
                 self.handshake_state.read_message(&in_msg.inner, &mut buf)?;
                 // Send the signature along this message
                 // TODO: use actual signature stored inside the responder instance

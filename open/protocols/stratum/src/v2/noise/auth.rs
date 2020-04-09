@@ -71,14 +71,14 @@ impl SignedPartHeader {
     pub fn verify_expiration(&self, now: SystemTime) -> Result<()> {
         let now_timestamp = Self::system_time_to_unix_time_u32(&now)?;
         if now_timestamp < self.valid_from {
-            return Err(ErrorKind::Noise(format!(
+            return Err(Error::Noise(format!(
                 "Certificate not yet valid, valid from: {:?}, now: {:?}",
                 self.valid_from, now
             ))
             .into());
         }
         if now_timestamp > self.not_valid_after {
-            return Err(ErrorKind::Noise(format!(
+            return Err(Error::Noise(format!(
                 "Certificate expired, not valid after: {:?}, now: {:?}",
                 self.valid_from, now
             ))
@@ -91,7 +91,7 @@ impl SignedPartHeader {
         t.duration_since(SystemTime::UNIX_EPOCH)
             .map(|duration| duration.as_secs() as u32)
             .map_err(|e| {
-                ErrorKind::Noise(format!(
+                Error::Noise(format!(
                     "Cannot convert system time to unix timestamp: {}",
                     e
                 ))
@@ -103,7 +103,7 @@ impl SignedPartHeader {
         SystemTime::UNIX_EPOCH
             .checked_add(Duration::from_secs(unix_timestamp.into()))
             .ok_or(
-                ErrorKind::Noise(
+                Error::Noise(
                     format!(
                         "Cannot convert unix timestamp ({}) to system time",
                         unix_timestamp

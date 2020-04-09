@@ -22,13 +22,11 @@
 
 //! Module that represents stratum protocol errors
 
-use std;
-use std::fmt::{self, Display};
-use std::io;
+use std::{self, fmt, io};
 
 use ii_async_compat::tokio_util;
 
-#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+#[derive(PartialEq, Debug, thiserror::Error)] //TODO: We lost Clone and Eq, is this important
 pub enum Error {
     /// Input/Output error.
     #[error("I/O error: {0}")]
@@ -51,26 +49,23 @@ pub enum Error {
 
     /// Stratum version 1 error
     #[error("V1 error: {0}")]
-    V1(super::v1::error::Error),
+    V1(#[from] super::v1::error::Error),
 
     /// Stratum version 2 error
     #[error("V2 error: {0}")]
-    V2(super::v2::error::Error),
-}
+    V2(#[from] super::v2::error::Error),
 
+    /// Hex Decode error
+    #[error("Hex value decoding error: {0}")]
+    HexDecode(#[from] hex::FromHexError),
 
-/// V1 Protocol version specific convenience conversion to Error
-impl From<super::v1::error::Error> for Error {
-    fn from(kind: super::v1::error::Error) -> Self {
-        Error::V1(kind)
-    }
-}
+    /// Invalid Bitcoin hash
+    #[error("Invalid Bitcoin hash: {0}")]
+    BitcoinHash(#[from] bitcoin_hashes::Error),
 
-/// V2 Protocol version specific convenience conversion to Error
-impl From<super::v2::error::Error> for Error {
-    fn from(kind: super::v2::error::Error) -> Self {
-        Error::V2(kind)
-    }
+    /// Timeout error
+    #[error("Timeout error: {0}")]
+    Timeout(#[from] ii_async_compat::TimeoutError)
 }
 
 impl From<io::Error> for Error {
