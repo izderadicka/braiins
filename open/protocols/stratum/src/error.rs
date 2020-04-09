@@ -137,3 +137,22 @@ impl From<super::v2::serialization::Error> for Error {
 
 /// A specialized `Result` type bound to [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use super::super::v2::error::Error as V2Error;
+
+    #[test]
+    fn test_error_display_with_inner_error() {
+
+        let inner_msg = "Usak is unknown";
+        let inner = V2Error::UnknownMessage(inner_msg.into());
+        let err = Error::V2(inner);
+        let msg = err.to_string();
+        assert!(msg.contains(inner_msg));
+
+    }
+
+}
