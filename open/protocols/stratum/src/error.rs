@@ -22,205 +22,123 @@
 
 //! Module that represents stratum protocol errors
 
-use failure::{Backtrace, Context, Fail};
 use std;
 use std::fmt::{self, Display};
 use std::io;
 
 use ii_async_compat::tokio_util;
 
-#[derive(Debug)]
-pub struct Error {
-    inner: Context<ErrorKind>,
-}
-
-#[derive(Clone, Eq, PartialEq, Debug, Fail)]
-pub enum ErrorKind {
+#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+pub enum Error {
     /// Input/Output error.
-    #[fail(display = "I/O error: {}", _0)]
+    #[error("I/O error: {0}")]
     Io(String),
 
     /// Errors emitted by serde
-    #[fail(display = "Serde: {}", _0)]
+    #[error("Serde: {0}")]
     Serde(String),
 
     /// General error used for more specific .
-    #[fail(display = "General error: {}", _0)]
+    #[error("General error: {0}")]
     General(String),
 
     /// Unexpected version of something.
-    #[fail(display = "Unexpected {} version: {}, expected: {}", _0, _1, _2)]
+    #[error("Unexpected {0} version: {1}, expected: {2}")]
     UnexpectedVersion(String, String, String),
 
-    #[fail(display = "Noise handshake error: {}", _0)]
+    #[error("Noise handshake error: {0}")]
     Noise(String),
 
     /// Stratum version 1 error
-    #[fail(display = "V1 error: {}", _0)]
-    V1(super::v1::error::ErrorKind),
+    #[error("V1 error: {0}")]
+    V1(super::v1::error::Error),
+
     /// Stratum version 2 error
-    #[fail(display = "V2 error: {}", _0)]
-    V2(super::v2::error::ErrorKind),
+    #[error("V2 error: {0}")]
+    V2(super::v2::error::Error),
 }
 
-/// Implement Fail trait instead of use Derive to get more control over custom type.
-/// The main advantage is customization of Context type which allows conversion of
-/// any error types to this custom error with general error kind by calling context
-/// method on any result type.
-impl Fail for Error {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.inner.cause()
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.inner.backtrace()
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.inner, f)
-    }
-}
-
-impl Error {
-    pub fn kind(&self) -> ErrorKind {
-        self.inner.get_context().clone()
-    }
-
-    pub fn into_inner(self) -> Context<ErrorKind> {
-        self.inner
-    }
-}
-
-/// Convenience conversion to Error from ErrorKind that carries the context
-impl From<ErrorKind> for Error {
-    fn from(kind: ErrorKind) -> Self {
-        Self {
-            inner: Context::new(kind),
-        }
-    }
-}
 
 /// V1 Protocol version specific convenience conversion to Error
-impl From<super::v1::error::ErrorKind> for Error {
-    fn from(kind: super::v1::error::ErrorKind) -> Self {
-        ErrorKind::V1(kind).into()
+impl From<super::v1::error::Error> for Error {
+    fn from(kind: super::v1::error::Error) -> Self {
+        Error::V1(kind)
     }
 }
 
 /// V2 Protocol version specific convenience conversion to Error
-impl From<super::v2::error::ErrorKind> for Error {
-    fn from(kind: super::v2::error::ErrorKind) -> Self {
-        ErrorKind::V2(kind).into()
-    }
-}
-
-impl From<Context<ErrorKind>> for Error {
-    fn from(inner: Context<ErrorKind>) -> Self {
-        Self { inner }
+impl From<super::v2::error::Error> for Error {
+    fn from(kind: super::v2::error::Error) -> Self {
+        Error::V2(kind)
     }
 }
 
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Io(msg)),
-        }
+        Error::Io(e.to_string())
     }
 }
 
 impl From<fmt::Error> for Error {
     fn from(e: fmt::Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::General(msg)),
-        }
+        Error::General(e.to_string())
+        
     }
 }
 
 impl From<tokio_util::codec::LinesCodecError> for Error {
     fn from(e: tokio_util::codec::LinesCodecError) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Io(msg)),
-        }
+        Error::Io(e.to_string())
     }
 }
 
 impl From<snow::error::Error> for Error {
     fn from(e: snow::error::Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Noise(msg)),
-        }
+        Error::Noise(e.to_string())
     }
 }
 
 impl From<ed25519_dalek::SignatureError> for Error {
     fn from(e: ed25519_dalek::SignatureError) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Noise(msg)),
-        }
+        Error::Noise(e.to_string())
     }
 }
 
 impl From<bs58::decode::Error> for Error {
     fn from(e: bs58::decode::Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Noise(msg)),
-        }
+        Error::Noise(e.to_string())
     }
 }
 
 impl From<std::str::Utf8Error> for Error {
     fn from(e: std::str::Utf8Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::General(msg)),
-        }
+        Error::General(e.to_string())
     }
 }
 
-impl From<Context<&str>> for Error {
-    fn from(context: Context<&str>) -> Self {
-        Self {
-            inner: context.map(|info| ErrorKind::General(info.to_string())),
-        }
+impl From<&str> for Error {
+    fn from(info: &str) -> Self {
+       Error::General(info.to_string())
     }
 }
 
-impl From<Context<String>> for Error {
-    fn from(context: Context<String>) -> Self {
-        Self {
-            inner: context.map(|info| ErrorKind::General(info)),
-        }
+impl From<String> for Error {
+    fn from(info: String) -> Self {
+        Error::General(info)
     }
 }
 
 impl From<serde_json::error::Error> for Error {
     fn from(e: serde_json::error::Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Serde(msg)),
-        }
+        Error::Serde(e.to_string())
     }
 }
 
 impl From<super::v2::serialization::Error> for Error {
     fn from(e: super::v2::serialization::Error) -> Self {
-        let msg = e.to_string();
-        Self {
-            inner: e.context(ErrorKind::Serde(msg)),
-        }
+        Error::Serde(e.to_string())
     }
 }
 
 /// A specialized `Result` type bound to [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
-
-/// Re-export failure's ResultExt for easier usage
-pub use failure::ResultExt;

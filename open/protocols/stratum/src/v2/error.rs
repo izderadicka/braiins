@@ -22,13 +22,11 @@
 
 //! Version 2 errors only
 
-use failure::Fail;
-
-#[derive(Clone, Eq, PartialEq, Debug, Fail)]
-pub enum ErrorKind {
-    #[fail(display = "Unknown message error: {}", _0)]
+#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Unknown message error: {0}")]
     UnknownMessage(String),
 
-    #[fail(display = "Channel not operational: {}", _0)]
+    #[error("Channel not operational: {0}")]
     ChannelNotOperational(String),
 }

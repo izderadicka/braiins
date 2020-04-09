@@ -12,7 +12,6 @@ path = "src/keytool.rs"
 bench = false
 
 [dependencies]
-failure = "0.1.5"
 thiserror = "1.0"
 lazy_static = "1.4.0"
 serde = { version = "1.0.89", features = ["derive"] }
