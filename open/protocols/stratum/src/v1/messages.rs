@@ -26,9 +26,9 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
-use super::error::ErrorKind;
+use super::error::Error;
 
-use crate::error::{Result, ResultExt};
+use crate::error::Result;
 use crate::v1::{
     rpc::{self, Method},
     ExtraNonce1, HexBytes, HexU32Be, PrevHash, Protocol,
@@ -46,7 +46,7 @@ macro_rules! impl_conversion_request {
             type Error = crate::error::Error;
 
             fn try_from(msg: $request) -> Result<Self> {
-                let params = serde_json::to_value(msg).context("Cannot parse request")?;
+                let params = serde_json::to_value(msg)?;
 
                 Ok(Self {
                     method: $method,
@@ -94,7 +94,7 @@ macro_rules! impl_conversion_response {
 
             fn try_from(resp: $response) -> Result<rpc::ResponsePayload> {
                 let result = rpc::StratumResult(
-                    serde_json::to_value(resp).context("Cannot parse response")?,
+                    serde_json::to_value(resp)?,
                 );
 
                 Ok(rpc::ResponsePayload {
@@ -111,7 +111,7 @@ macro_rules! impl_conversion_response {
                 let result = resp
                     .payload
                     .result
-                    .ok_or(ErrorKind::Json("No result".into()))?;
+                    .ok_or(Error::Json("No result".into()))?;
                 <$response>::try_from(&result)
             }
         }
@@ -124,7 +124,6 @@ macro_rules! impl_conversion_response {
                 // to the visitor pattern. We shouldn't clone any part of the incoming message
                 // However, since the result is being passed by reference
                 serde_json::from_value(result.0.clone())
-                    .context("Failed to parse response")
                     .map_err(Into::into)
             }
         }
@@ -164,7 +163,7 @@ impl TryInto<(String, serde_json::Value)> for VersionRolling {
     fn try_into(self) -> Result<(String, serde_json::Value)> {
         Ok((
             "version-rolling".to_string(),
-            serde_json::to_value(self).context("JSON error")?,
+            serde_json::to_value(self)?
         ))
     }
 }
@@ -265,9 +264,9 @@ impl Subscribe {
 // Subscribe::try_from()
 //  FIXME: verify signature, url, and port?
 //  let agent_signature =
-//      req.param_to_string(0, ErrorKind::Subscribe("Invalid signature".into()))?;
-//  let url = req.param_to_string(2, ErrorKind::Subscribe("Invalid pool URL".into()))?;
-//  let port = req.param_to_string(3, ErrorKind::Subscribe("Invalid TCP port".into()))?;
+//      req.param_to_string(0, Error::Subscribe("Invalid signature".into()))?;
+//  let url = req.param_to_string(2, Error::Subscribe("Invalid pool URL".into()))?;
+//  let port = req.param_to_string(3, Error::Subscribe("Invalid TCP port".into()))?;
 impl_conversion_request!(Subscribe, Method::Subscribe, visit_subscribe);
 
 /// Custom subscriptions

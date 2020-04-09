@@ -27,7 +27,7 @@ use std::fmt;
 
 use ii_async_compat::bytes;
 
-use crate::error::{Result, ResultExt};
+use crate::error::Result;
 use crate::Protocol;
 
 pub use crate::AnyPayload as SerializablePayload;
@@ -116,12 +116,10 @@ impl<P: Protocol> Payload<P> {
         match &self {
             Self::SerializedBytes(payload) => writer
                 .write(payload)
-                .context("Serialize static payload")
                 .map(|_| ())
                 .map_err(Into::into),
             Self::LazyBytes(payload) => payload
                 .serialize_to_writer(writer)
-                .context("Serialize dynamic payload")
                 .map_err(Into::into),
         }
     }
