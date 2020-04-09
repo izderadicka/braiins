@@ -101,7 +101,7 @@ where
             .await?
             // Convert optional frame into an error, unwrap it, and unwrap the
             // payload, too
-            .ok_or(Error::Io(
+            .ok_or(Error::Handshake(
                 "Noise handshake Connection shutdown".to_string(),
             ))??;
         Ok(Message::new(handshake_frame))

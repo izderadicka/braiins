@@ -26,15 +26,22 @@ use std::{self, fmt, io};
 
 use ii_async_compat::tokio_util;
 
-#[derive(PartialEq, Debug, thiserror::Error)] //TODO: We lost Clone and Eq, is this important
+#[derive(Debug, thiserror::Error)] //TODO: We lost Clone PartialEq and Eq, is this important?
 pub enum Error {
     /// Input/Output error.
     #[error("I/O error: {0}")]
-    Io(String),
+    Io(#[from] io::Error),
+
+    #[error("Handshake error: {0}")]
+    Handshake(String),
+
+    /// Line Codec error.
+    #[error("Lines Codec error: {0}")]
+    LinesCodec(#[from] tokio_util::codec::LinesCodecError),
 
     /// Errors emitted by serde
-    #[error("Serde: {0}")]
-    Serde(String),
+    #[error("Serde JSON: {0}")]
+    Serde(#[from] serde_json::error::Error),
 
     /// General error used for more specific .
     #[error("General error: {0}")]
@@ -47,6 +54,15 @@ pub enum Error {
     #[error("Noise handshake error: {0}")]
     Noise(String),
 
+    #[error("Noise protocol error: {0}")]
+    NoiseProtocol(#[from] snow::error::Error),
+
+    #[error("Noise signature error: {0}")]
+    NoiseSignature(#[from] ed25519_dalek::SignatureError),
+
+    #[error("Noise base58 error: {0}")]
+    NoiseEncoding(#[from] bs58::decode::Error),
+
     /// Stratum version 1 error
     #[error("V1 error: {0}")]
     V1(#[from] super::v1::error::Error),
@@ -54,6 +70,10 @@ pub enum Error {
     /// Stratum version 2 error
     #[error("V2 error: {0}")]
     V2(#[from] super::v2::error::Error),
+
+    /// Stratum version 2 serialization error
+    #[error("V2 serialization error: {0}")]
+    V2Serialization(#[from] super::v2::serialization::Error),
 
     /// Hex Decode error
     #[error("Hex value decoding error: {0}")]
@@ -65,44 +85,12 @@ pub enum Error {
 
     /// Timeout error
     #[error("Timeout error: {0}")]
-    Timeout(#[from] ii_async_compat::TimeoutError)
-}
+    Timeout(#[from] ii_async_compat::TimeoutError),
 
-impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self {
-        Error::Io(e.to_string())
-    }
-}
+    /// Format error
+    #[error("Format error: {0}")]
+    Format(#[from] fmt::Error)
 
-impl From<fmt::Error> for Error {
-    fn from(e: fmt::Error) -> Self {
-        Error::General(e.to_string())
-        
-    }
-}
-
-impl From<tokio_util::codec::LinesCodecError> for Error {
-    fn from(e: tokio_util::codec::LinesCodecError) -> Self {
-        Error::Io(e.to_string())
-    }
-}
-
-impl From<snow::error::Error> for Error {
-    fn from(e: snow::error::Error) -> Self {
-        Error::Noise(e.to_string())
-    }
-}
-
-impl From<ed25519_dalek::SignatureError> for Error {
-    fn from(e: ed25519_dalek::SignatureError) -> Self {
-        Error::Noise(e.to_string())
-    }
-}
-
-impl From<bs58::decode::Error> for Error {
-    fn from(e: bs58::decode::Error) -> Self {
-        Error::Noise(e.to_string())
-    }
 }
 
 impl From<std::str::Utf8Error> for Error {
@@ -120,18 +108,6 @@ impl From<&str> for Error {
 impl From<String> for Error {
     fn from(info: String) -> Self {
         Error::General(info)
-    }
-}
-
-impl From<serde_json::error::Error> for Error {
-    fn from(e: serde_json::error::Error) -> Self {
-        Error::Serde(e.to_string())
-    }
-}
-
-impl From<super::v2::serialization::Error> for Error {
-    fn from(e: super::v2::serialization::Error) -> Self {
-        Error::Serde(e.to_string())
     }
 }
 
