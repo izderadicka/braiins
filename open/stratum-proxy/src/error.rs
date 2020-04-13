@@ -51,10 +51,6 @@ pub enum Error {
     #[error("Timeout error: {0}")]
     Timeout(#[from] tokio::time::Elapsed),
     
-    /// CLI usage / configuration error
-    #[error("Could not parse IP address: {0}")]
-    BadIp(String),
-
     /// Utf8 error
     #[error("Error decoding UTF-8 string: {0}")]
     Utf8(#[from] std::str::Utf8Error),
@@ -65,7 +61,11 @@ pub enum Error {
 
     /// Connection Attempt Error
     #[error("Client connection attempt error: {0}")]
-    ClientAttempt(#[from] ii_wire::AttemptError)
+    ClientAttempt(#[from] ii_wire::AttemptError),
+
+    /// File content error
+    #[error("Invalid content of key/certificate file: {0}")]
+    InvalidFile(String)
 }
 
 impl<T> From<futures::channel::mpsc::TrySendError<T>> for Error
