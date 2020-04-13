@@ -22,7 +22,7 @@
 
 //! Module that represents stratum protocol errors
 
-use ii_async_compat::tokio_util;
+use ii_async_compat::{tokio_util, tokio};
 use std::{self, fmt, io};
 use thiserror::Error;
 
@@ -85,7 +85,7 @@ pub enum Error {
 
     /// Timeout error
     #[error("Timeout error: {0}")]
-    Timeout(#[from] ii_async_compat::Elapsed),
+    Timeout(#[from] tokio::time::Elapsed),
 
     /// Format error
     #[error("Format error: {0}")]

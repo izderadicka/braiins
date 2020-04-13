@@ -41,8 +41,6 @@ pub mod prelude {
 }
 
 pub use stream_cancel::{self, Tripwire};
-/// Tokio timeout error
-pub use tokio::time::Elapsed; 
 
 use std::error::Error as StdError;
 use std::fmt;
