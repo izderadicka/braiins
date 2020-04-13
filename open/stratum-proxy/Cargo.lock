@@ -720,17 +720,18 @@ dependencies = [
 name = "ii-stratum-proxy"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "bitcoin_hashes",
  "clap",
  "ctrlc",
- "failure",
  "ii-async-compat",
  "ii-logging",
  "ii-stratum",
  "ii-wire",
  "serde_json",
  "structopt",
+ "thiserror",
  "uint",
 ]
 
