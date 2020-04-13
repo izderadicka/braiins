@@ -22,11 +22,11 @@
 
 //! Module that represents stratum protocol errors
 
-use std::{self, fmt, io};
-
 use ii_async_compat::tokio_util;
+use std::{self, fmt, io};
+use thiserror::Error;
 
-#[derive(Debug, thiserror::Error)] //TODO: We lost Clone PartialEq and Eq, is this important?
+#[derive(Error, Debug)] //TODO: We lost Clone PartialEq and Eq, is this important?
 pub enum Error {
     /// Input/Output error.
     #[error("I/O error: {0}")]
@@ -85,23 +85,20 @@ pub enum Error {
 
     /// Timeout error
     #[error("Timeout error: {0}")]
-    Timeout(#[from] ii_async_compat::TimeoutError),
+    Timeout(#[from] ii_async_compat::Elapsed),
 
     /// Format error
     #[error("Format error: {0}")]
-    Format(#[from] fmt::Error)
+    Format(#[from] fmt::Error),
 
-}
-
-impl From<std::str::Utf8Error> for Error {
-    fn from(e: std::str::Utf8Error) -> Self {
-        Error::General(e.to_string())
-    }
+    /// Utf8 error
+    #[error("Error decoding UTF-8 string: {0}")]
+    Utf8(#[from] std::str::Utf8Error),
 }
 
 impl From<&str> for Error {
     fn from(info: &str) -> Self {
-       Error::General(info.to_string())
+        Error::General(info.to_string())
     }
 }
 
@@ -114,21 +111,17 @@ impl From<String> for Error {
 /// A specialized `Result` type bound to [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
 
-
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::v2::error::Error as V2Error;
+    use super::*;
 
     #[test]
     fn test_error_display_with_inner_error() {
-
         let inner_msg = "Usak is unknown";
         let inner = V2Error::UnknownMessage(inner_msg.into());
         let err = Error::V2(inner);
         let msg = err.to_string();
         assert!(msg.contains(inner_msg));
-
     }
-
 }

@@ -22,7 +22,9 @@
 
 //! Version 2 errors only
 
-#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+use thiserror::Error;
+
+#[derive(Error, Clone, Eq, PartialEq, Debug)]
 pub enum Error {
     #[error("Unknown message error: {0}")]
     UnknownMessage(String),

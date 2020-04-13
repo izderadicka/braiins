@@ -699,7 +699,6 @@ dependencies = [
  "bs58",
  "byteorder",
  "ed25519-dalek",
- "failure",
  "hex",
  "ii-async-compat",
  "ii-bitcoin",

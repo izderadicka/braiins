@@ -22,7 +22,9 @@
 
 //! Version 1 errors only
 
-#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+use thiserror::Error;
+
+#[derive(Error, Clone, Eq, PartialEq, Debug)]
 pub enum Error {
     /// Json error.
     #[error("JSON error: {0}")]
