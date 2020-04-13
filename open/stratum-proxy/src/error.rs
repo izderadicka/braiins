@@ -22,12 +22,11 @@
 
 //! Module that represents custom stratum proxy errors
 
-use thiserror::Error;
 use std;
 use std::io;
+use thiserror::Error;
 
 use ii_async_compat::prelude::*;
-
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -50,7 +49,7 @@ pub enum Error {
     /// Timeout error.
     #[error("Timeout error: {0}")]
     Timeout(#[from] tokio::time::Elapsed),
-    
+
     /// Utf8 error
     #[error("Error decoding UTF-8 string: {0}")]
     Utf8(#[from] std::str::Utf8Error),
@@ -65,17 +64,17 @@ pub enum Error {
 
     /// File content error
     #[error("Invalid content of key/certificate file: {0}")]
-    InvalidFile(String)
+    InvalidFile(String),
 }
 
 impl<T> From<futures::channel::mpsc::TrySendError<T>> for Error
-where T: Send+Sync+'static
+where
+    T: Send + Sync + 'static,
 {
     fn from(e: futures::channel::mpsc::TrySendError<T>) -> Self {
         Error::Io(io::Error::new(io::ErrorKind::Other, e))
     }
 }
-
 
 impl From<&str> for Error {
     fn from(msg: &str) -> Self {

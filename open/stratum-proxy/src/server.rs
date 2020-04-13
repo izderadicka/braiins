@@ -36,7 +36,7 @@ use ii_stratum::v1;
 use ii_stratum::v2;
 use ii_wire::{Address, Client, Connection, Server};
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 use crate::translation::V2ToV1Translation;
 
 /// Represents a single protocol translation session (one V2 client talking to one V1 server)
@@ -128,7 +128,10 @@ impl ConnTranslation {
     {
         let status = match frame {
             Some(v2_translated_frame) => connection.send(v2_translated_frame).await,
-            None => Err(Error::Io(io::Error::new(io::ErrorKind::Other, "No more frames".to_string())))?,
+            None => Err(Error::Io(io::Error::new(
+                io::ErrorKind::Other,
+                "No more frames".to_string(),
+            )))?,
         };
         status.map_err(|e| {
             info!("Send error: {} for (peer: {:?})", e, peer_addr);

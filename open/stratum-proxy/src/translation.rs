@@ -501,12 +501,10 @@ impl V2ToV1Translation {
                         Ok(())
                     }
                 } else {
-                    Err(
-                        ii_stratum::error::Error::from(v1::error::Error::Subscribe(
-                            "Authorize result is false".to_string(),
-                        ))
-                        .into(),
-                    )
+                    Err(ii_stratum::error::Error::from(v1::error::Error::Subscribe(
+                        "Authorize result is false".to_string(),
+                    ))
+                    .into())
                 }
             })
             // any problem in parsing the response results in authorization failure
@@ -695,8 +693,7 @@ impl V2ToV1Translation {
     ) -> crate::error::Result<v2::messages::SetNewPrevHash> {
         // TODO review how this can be prevented from failing. If this fails, it should result in
         // panic as it marks a software bug
-        let prev_hash =
-            sha256d::Hash::from_slice(payload.prev_hash())?;
+        let prev_hash = sha256d::Hash::from_slice(payload.prev_hash())?;
         let prev_hash = Uint256Bytes(prev_hash.into_inner());
 
         Ok(v2::messages::SetNewPrevHash {
