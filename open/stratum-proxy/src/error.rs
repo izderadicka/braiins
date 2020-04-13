@@ -58,12 +58,21 @@ pub enum Error {
     /// Utf8 error
     #[error("Error decoding UTF-8 string: {0}")]
     Utf8(#[from] std::str::Utf8Error),
+
+    /// Json Error
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
+
+    /// Connection Attempt Error
+    #[error("Client connection attempt error: {0}")]
+    ClientAttempt(#[from] ii_wire::AttemptError)
 }
 
 impl<T> From<futures::channel::mpsc::TrySendError<T>> for Error
+where T: Send+Sync+'static
 {
     fn from(e: futures::channel::mpsc::TrySendError<T>) -> Self {
-        io::Error::new(io::ErrorKind::Other, e)
+        Error::Io(io::Error::new(io::ErrorKind::Other, e))
     }
 }
 

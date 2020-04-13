@@ -25,12 +25,11 @@
 
 use std::cell::RefCell;
 use structopt::StructOpt;
-
+use anyhow::{Result, Context};
 use ctrlc;
 
 use ii_async_compat::tokio;
 use ii_stratum_proxy::{
-    error::{Result, ResultExt},
     frontend::Args,
     server,
 };
