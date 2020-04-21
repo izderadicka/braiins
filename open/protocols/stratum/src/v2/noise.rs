@@ -135,8 +135,7 @@ impl Initiator {
             remote_static_key,
             self.authority_public_key,
         );
-        certificate
-            .validate()?;
+        certificate.validate()?;
 
         Ok(())
     }

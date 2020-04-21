@@ -114,13 +114,8 @@ impl<P: Protocol> Payload<P> {
     /// Serializes the payload directly into the `writer` without creating any intermediate buffers
     pub fn serialize_to_writer<T: std::io::Write>(&self, writer: &mut T) -> Result<()> {
         match &self {
-            Self::SerializedBytes(payload) => writer
-                .write(payload)
-                .map(|_| ())
-                .map_err(Into::into),
-            Self::LazyBytes(payload) => payload
-                .serialize_to_writer(writer)
-                .map_err(Into::into),
+            Self::SerializedBytes(payload) => writer.write(payload).map(|_| ()).map_err(Into::into),
+            Self::LazyBytes(payload) => payload.serialize_to_writer(writer).map_err(Into::into),
         }
     }
 }

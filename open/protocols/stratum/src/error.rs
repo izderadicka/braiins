@@ -22,7 +22,7 @@
 
 //! Module that represents stratum protocol errors
 
-use ii_async_compat::{tokio_util, tokio};
+use ii_async_compat::{tokio, tokio_util};
 use std::{self, fmt, io};
 use thiserror::Error;
 

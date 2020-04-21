@@ -93,9 +93,7 @@ macro_rules! impl_conversion_response {
             type Error = crate::error::Error;
 
             fn try_from(resp: $response) -> Result<rpc::ResponsePayload> {
-                let result = rpc::StratumResult(
-                    serde_json::to_value(resp)?,
-                );
+                let result = rpc::StratumResult(serde_json::to_value(resp)?);
 
                 Ok(rpc::ResponsePayload {
                     result: Some(result),
@@ -108,10 +106,7 @@ macro_rules! impl_conversion_response {
             type Error = crate::error::Error;
 
             fn try_from(resp: rpc::Response) -> Result<Self> {
-                let result = resp
-                    .payload
-                    .result
-                    .ok_or(Error::Json("No result".into()))?;
+                let result = resp.payload.result.ok_or(Error::Json("No result".into()))?;
                 <$response>::try_from(&result)
             }
         }
@@ -123,8 +118,7 @@ macro_rules! impl_conversion_response {
                 // TODO this is needs to be fixed within the deserialization stack with regards
                 // to the visitor pattern. We shouldn't clone any part of the incoming message
                 // However, since the result is being passed by reference
-                serde_json::from_value(result.0.clone())
-                    .map_err(Into::into)
+                serde_json::from_value(result.0.clone()).map_err(Into::into)
             }
         }
     };
@@ -161,10 +155,7 @@ impl TryInto<(String, serde_json::Value)> for VersionRolling {
     type Error = crate::error::Error;
 
     fn try_into(self) -> Result<(String, serde_json::Value)> {
-        Ok((
-            "version-rolling".to_string(),
-            serde_json::to_value(self)?
-        ))
+        Ok(("version-rolling".to_string(), serde_json::to_value(self)?))
     }
 }
 

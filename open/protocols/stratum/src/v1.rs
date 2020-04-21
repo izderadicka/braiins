@@ -126,9 +126,7 @@ pub fn build_message_from_frame(frame: framing::Frame) -> Result<Message<Protoco
                 }
                 Method::SetVersionMask => Box::new(messages::SetVersionMask::try_from(request)?)
                     as Box<dyn AnyPayload<Protocol>>,
-                _ => {
-                    return Err(Error::Rpc(format!("Unsupported request {:?}", request)).into())
-                }
+                _ => return Err(Error::Rpc(format!("Unsupported request {:?}", request)).into()),
             };
             (id, payload)
         }
@@ -196,9 +194,7 @@ impl TryFrom<&str> for HexBytes {
     type Error = crate::error::Error;
 
     fn try_from(value: &str) -> Result<Self> {
-        Ok(HexBytes(
-            hex_decode(value)?,
-        ))
+        Ok(HexBytes(hex_decode(value)?))
     }
 }
 

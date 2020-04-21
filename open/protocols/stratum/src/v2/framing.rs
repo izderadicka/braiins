@@ -339,8 +339,7 @@ mod test {
             }
 
             fn serialize_to_writer(&self, writer: &mut dyn std::io::Write) -> Result<()> {
-                writer
-                    .write(&EXPECTED_FRAME_BYTES[6..])?;
+                writer.write(&EXPECTED_FRAME_BYTES[6..])?;
                 Ok(())
             }
         }
