@@ -65,6 +65,14 @@ pub struct Args {
     /// Secret key as counter part of the public key in the configured public certificate
     #[structopt(short = "s", long, parse(from_os_str), required_unless("insecure"))]
     pub secret_key_file: Option<PathBuf>,
+
+    /// Require PROXY protocol v1 on incoming connection
+    #[structopt(long)]
+    pub proxy_protocol_v1: bool,
+
+    /// Pass PROXY protocol header v1 from incoming connection to outgoing connection
+    #[structopt(long)]
+    pub pass_proxy_protocol_v1: bool,
 }
 
 impl Args {

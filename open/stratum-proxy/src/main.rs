@@ -40,12 +40,13 @@ async fn main() -> Result<()> {
     let args = Args::from_args();
 
     let certificate_secret_key_pair = args.read_certificate_secret_key_pair().await?;
-
+    let proxy_config: server::ProxyConfig = (&args).into();
     let server = server::ProxyServer::listen(
         args.listen_address,
         args.upstream_address,
         server::handle_connection,
         certificate_secret_key_pair,
+        proxy_config,
     )
     .context("Cannot bind the server")?;
 

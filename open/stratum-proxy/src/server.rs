@@ -37,6 +37,7 @@ use ii_stratum::v2;
 use ii_wire::{Address, Client, Connection, Server};
 
 use crate::error::{Error, Result};
+use crate::frontend::Args;
 use crate::translation::V2ToV1Translation;
 
 /// Represents a single protocol translation session (one V2 client talking to one V1 server)
@@ -272,6 +273,33 @@ impl SecurityContext {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ProxyConfig {
+    /// Expects PROXY protocol header on downstream connection
+    proxy_protocol_v1: bool,
+    /// If proxy protocol information is available from downstream connection,
+    /// passes it to upstream connection
+    pass_proxy_protocol_v1: bool,
+}
+
+impl Default for ProxyConfig {
+    fn default() -> Self {
+        ProxyConfig {
+            proxy_protocol_v1: false,
+            pass_proxy_protocol_v1: false,
+        }
+    }
+}
+
+impl From<&Args> for ProxyConfig {
+    fn from(args: &Args) -> Self {
+        ProxyConfig {
+            proxy_protocol_v1: args.proxy_protocol_v1,
+            pass_proxy_protocol_v1: args.pass_proxy_protocol_v1,
+        }
+    }
+}
+
 struct ProxyConnection<FN> {
     /// Downstream connection that is to be handled
     v2_downstream_conn: TcpStream,
@@ -281,6 +309,8 @@ struct ProxyConnection<FN> {
     get_connection_handler: Arc<FN>,
     /// Security context for noise handshake
     security_context: Option<Arc<SecurityContext>>,
+    /// Configuration of PROXY protocol
+    proxy_config: ProxyConfig,
 }
 
 impl<FN, FT> ProxyConnection<FN>
@@ -293,12 +323,14 @@ where
         v1_upstream_addr: Address,
         security_context: Option<Arc<SecurityContext>>,
         get_connection_handler: Arc<FN>,
+        proxy_config: ProxyConfig,
     ) -> Self {
         Self {
             v2_downstream_conn,
             v1_upstream_addr,
             get_connection_handler,
             security_context,
+            proxy_config,
         }
     }
 
@@ -385,6 +417,8 @@ pub struct ProxyServer<FN> {
     get_connection_handler: Arc<FN>,
     /// Security context for noise handshake
     security_context: Option<Arc<SecurityContext>>,
+    /// PROXY protocol configuration
+    proxy_config: ProxyConfig,
 }
 
 impl<FN, FT> ProxyServer<FN>
@@ -402,6 +436,7 @@ where
             v2::noise::auth::Certificate,
             v2::noise::auth::StaticSecretKeyFormat,
         )>,
+        proxy_config: ProxyConfig,
     ) -> Result<ProxyServer<FN>> {
         let server = Server::bind(&listen_addr)?;
 
@@ -422,6 +457,7 @@ where
             quit_tx,
             get_connection_handler: Arc::new(get_connection_handler),
             security_context,
+            proxy_config,
         })
     }
 
@@ -446,6 +482,7 @@ where
                     .as_ref()
                     .map(|context| context.clone()),
                 self.get_connection_handler.clone(),
+                self.proxy_config,
             )
             .handle(),
         );
