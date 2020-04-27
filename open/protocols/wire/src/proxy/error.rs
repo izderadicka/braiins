@@ -1,4 +1,4 @@
-// Copyright (C) 2019  Braiins Systems s.r.o.
+// Copyright (C) 2020  Braiins Systems s.r.o.
 //
 // This file is part of Braiins Open-Source Initiative (BOSI).
 //
@@ -20,22 +20,30 @@
 // of such proprietary license or if you have any other questions, please
 // contact us at opensource@braiins.com.
 
-// Futures and Tokio are re-exported here for the benefit of dependant crates.
-// That way, the dependencies are specified in one place (in wire/Cargo.toml).
+use ii_async_compat::prelude::tokio;
+use thiserror::Error;
 
-#[macro_use]
-extern crate ii_logging;
+/// Error type for this module
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Proxy protocol error: {0}")]
+    Proxy(String),
 
-mod connection;
-pub use connection::*;
+    #[error("IO error: {0}")]
+    Io(#[from] tokio::io::Error),
 
-mod server;
-pub use server::*;
+    #[error("Invalid encoding of proxy header: {0}")]
+    Utf8(#[from] std::str::Utf8Error),
 
-mod client;
-pub use client::*;
+    #[error("Invalid address in proxy header: {0}")]
+    IPAddress(#[from] std::net::AddrParseError),
 
-mod framing;
-pub use framing::*;
+    #[error("Invalid port in proxy header: {0}")]
+    Port(#[from] std::num::ParseIntError),
 
-pub mod proxy;
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+}
+
+/// Convenient Result type, with our Error included
+pub type Result<T> = std::result::Result<T, Error>;

@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 ii-async-compat = { path = "../../utils-rs/async-compat" }
+ii-logging = {path = "../../utils-rs/logging"}
 failure = "0.1.5"
 pin-project = "0.4.5"
 async-trait = "0.1.17"
