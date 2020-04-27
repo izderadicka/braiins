@@ -34,7 +34,10 @@ use ii_async_compat::{bytes, select};
 use ii_logging::macros::*;
 use ii_stratum::v1;
 use ii_stratum::v2;
-use ii_wire::{Address, Client, Connection, Server};
+use ii_wire::{
+    proxy::{accept_v1_framed, Connector},
+    Address, Client, Connection, Server,
+};
 
 use crate::error::{Error, Result};
 use crate::frontend::Args;
@@ -337,8 +340,16 @@ where
     /// Handle incoming connection:
     ///  - establish upstream V1 connection
     ///  - establish noise handshake (if configured)
-    ///  - run the custom connection handler that
     async fn do_handle(self) -> Result<()> {
+        if self.proxy_config.proxy_protocol_v1 {
+            self.do_handle_with_proxy_header().await
+        } else {
+            self.do_handle_direct().await
+        }
+    }
+
+    /// Handle incoming connection without PROXY protocol
+    async fn do_handle_direct(self) -> Result<()> {
         // TODO - here we should accept Proxy protocol
 
         let v2_peer_addr = self.v2_downstream_conn.peer_addr()?;
@@ -373,6 +384,61 @@ where
             }
             // Insecure operation has been configured
             None => Connection::<v2::Framing>::new(self.v2_downstream_conn).into_inner(),
+        };
+
+        // Start processing of both ends
+        // TODO adjust connection handler to return a Result
+        (self.get_connection_handler)(
+            v2_framed_stream,
+            v2_peer_addr,
+            v1_framed_stream,
+            v1_peer_addr,
+        )
+        .await
+    }
+
+    /// Handle incoming connection with proxy header
+    async fn do_handle_with_proxy_header(self) -> Result<()> {
+        let v2_peer_addr = self.v2_downstream_conn.peer_addr()?;
+        let (proxy_info, parts) = accept_v1_framed(self.v2_downstream_conn).await?;
+        debug!("Received connection from downstream proxy - original source, {:?} original destination {:?}", 
+        proxy_info.original_source, proxy_info.original_destination);
+        // Connect to upstream V1 server
+        let mut v1_client = Client::new(self.v1_upstream_addr);
+        // TODO Attempt only once to connect -> consider using the backoff for a few rounds before
+        // failing. Also
+        // Use the connection only to build the Framed object with V1 framing and to extract the
+        // peer address
+        let mut v1_conn = v1_client.next().await?;
+
+        if self.proxy_config.pass_proxy_protocol_v1 {
+            Connector::new()
+                .connect_to(
+                    &mut v1_conn,
+                    proxy_info.original_source,
+                    proxy_info.original_destination,
+                )
+                .await?;
+        }
+        let v1_peer_addr = v1_conn.peer_addr()?;
+        let v1_framed_stream = Connection::<v1::Framing>::new(v1_conn).into_inner();
+        info!(
+            "Established translation connection with upstream V1 {} for V2 peer: {}",
+            v1_peer_addr, v2_peer_addr
+        );
+
+        let v2_framed_stream = match self.security_context {
+            // Establish noise responder and run the handshake
+            Some(security_context) => {
+                // TODO pass the signature message once the Responder API is adjusted
+                let responder = v2::noise::Responder::new(
+                    &security_context.static_key_pair,
+                    security_context.signature_noise_message.clone(),
+                );
+                responder.accept_from_parts(parts).await?
+            }
+            // Insecure operation has been configured
+            None => Connection::<v2::Framing>::new_from_parts(parts).into_inner(),
         };
 
         // Start processing of both ends
