@@ -32,7 +32,7 @@ use std::convert::TryInto;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio::net::{TcpStream, ToSocketAddrs};
+use tokio::net::TcpStream;
 
 use tokio::prelude::*;
 use tokio_util::codec::{Decoder, Encoder};
