@@ -202,15 +202,32 @@ impl Responder {
         }
     }
 
+    /// Executes noise protocol handshake on provided connection
     pub async fn accept(self, connection: TcpStream) -> Result<v2::Framed> {
         // Run the handshake and switch to transport mode
-        let mut noise_framed_stream = ii_wire::Connection::<Framing>::new(connection).into_inner();
-
-        let handshake = handshake::Handshake::new(self);
-        let transport_mode = handshake.run(&mut noise_framed_stream).await?;
-
-        Ok(transport_mode.into_stratum_framed_stream(noise_framed_stream))
+        let noise_framed_stream = ii_wire::Connection::<Framing>::new(connection).into_inner();
+        accept_framed(self, noise_framed_stream).await
     }
+
+    /// Executes noise protocol handshake on provided `FramedParts` - e.g. on stream and buffers returned
+    /// from previous phase (PROXY protocol etc.)
+    pub async fn accept_from_parts<C>(
+        self,
+        parts: FramedParts<TcpStream, C>,
+    ) -> Result<v2::Framed> {
+        let noise_framed_stream =
+            ii_wire::Connection::<Framing>::new_from_parts(parts).into_inner();
+        accept_framed(self, noise_framed_stream).await
+    }
+}
+
+async fn accept_framed(
+    responder: Responder,
+    mut noise_framed_stream: NoiseFramedTcpStream,
+) -> Result<v2::Framed> {
+    let handshake = handshake::Handshake::new(responder);
+    let transport_mode = handshake.run(&mut noise_framed_stream).await?;
+    Ok(transport_mode.into_stratum_framed_stream(noise_framed_stream))
 }
 
 impl handshake::Step for Responder {
