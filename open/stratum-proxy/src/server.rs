@@ -307,6 +307,8 @@ where
     ///  - establish noise handshake (if configured)
     ///  - run the custom connection handler that
     async fn do_handle(self) -> Result<()> {
+        // TODO - here we should accept Proxy protocol
+
         let v2_peer_addr = self.v2_downstream_conn.peer_addr()?;
 
         // Connect to upstream V1 server
@@ -316,6 +318,8 @@ where
         // Use the connection only to build the Framed object with V1 framing and to extract the
         // peer address
         let v1_conn = v1_client.next().await?;
+
+        // TODO: here we can send PROXY header upstream
         let v1_peer_addr = v1_conn.peer_addr()?;
         let v1_framed_stream = Connection::<v1::Framing>::new(v1_conn).into_inner();
         info!(
@@ -323,6 +327,8 @@ where
             v1_peer_addr, v2_peer_addr
         );
 
+        // TODO:   Now we need to either pass ProxyProtocol here (then both method should be generic)
+        //          or FramedParts - which is probably easier
         let v2_framed_stream = match self.security_context {
             // Establish noise responder and run the handshake
             Some(security_context) => {
