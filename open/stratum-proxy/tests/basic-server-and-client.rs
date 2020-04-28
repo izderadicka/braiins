@@ -38,7 +38,7 @@ use ii_stratum::test_utils;
 use ii_stratum::v1;
 use ii_stratum::v2;
 use ii_stratum_proxy::server;
-use ii_wire::{Address, Connection, Server, proxy};
+use ii_wire::{proxy, Address, Connection, Server};
 
 mod utils;
 
@@ -204,9 +204,14 @@ async fn test_v2_client(server_addr: &Address, proxy_header: &Option<proxy::Prox
         async move {
             let mut conn = server_addr.connect().await?;
             if let Some(proxy_header) = proxy_header {
-                proxy::Connector::new().connect_to(&mut conn, proxy_header.original_source, proxy_header.original_destination)
-                .await
-                .expect("Cannot send proxy header");
+                proxy::Connector::new()
+                    .connect_to(
+                        &mut conn,
+                        proxy_header.original_source,
+                        proxy_header.original_destination,
+                    )
+                    .await
+                    .expect("Cannot send proxy header");
             };
             let mut conn: Connection<v2::Framing> = conn.into();
 
@@ -265,7 +270,10 @@ async fn test_v2server_full_with_proxy() {
         addr_v1,
         server::handle_connection,
         None,
-        server::ProxyConfig{proxy_protocol_v1: true, pass_proxy_protocol_v1: false},
+        server::ProxyConfig {
+            proxy_protocol_v1: true,
+            pass_proxy_protocol_v1: false,
+        },
     )
     .expect("BUG: Could not bind v2server");
     let mut v2server_quit = v2server.quit_channel();
@@ -273,7 +281,9 @@ async fn test_v2server_full_with_proxy() {
     tokio::spawn(v2server.run());
     let original_source: Option<SocketAddr> = "127.0.0.10:1234".parse().ok();
     let original_destination: Option<SocketAddr> = "127.0.0.20:5678".parse().ok();
-    let proxy_info: proxy::ProxyInfo = (original_source, original_destination).try_into().expect("BUG: invalid addresses");
+    let proxy_info: proxy::ProxyInfo = (original_source, original_destination)
+        .try_into()
+        .expect("BUG: invalid addresses");
     test_v2_client(&addr_v2, &Some(proxy_info)).await;
 
     // Signal the server to shut down
