@@ -38,7 +38,7 @@ use ii_stratum::test_utils;
 use ii_stratum::v1;
 use ii_stratum::v2;
 use ii_stratum_proxy::server;
-use ii_wire::{Address, Connection, Server};
+use ii_wire::{Address, Connection, Server, proxy};
 
 mod utils;
 
@@ -46,6 +46,7 @@ static ADDR: &'static str = "127.0.0.1";
 static PORT_V1: u16 = 9001;
 static PORT_V2: u16 = 9002;
 static PORT_V2_FULL: u16 = 9003;
+static PORT_V2_WITH_PROXY: u16 = 9004;
 
 #[tokio::test]
 async fn test_v2server() {
@@ -197,11 +198,17 @@ async fn test_v1server() {
         .await;
 }
 
-async fn test_v2_client(server_addr: &Address) {
+async fn test_v2_client(server_addr: &Address, proxy_header: &Option<proxy::ProxyInfo>) {
     // Test client for V2
     utils::backoff(50, 4, move || {
         async move {
-            let mut conn: Connection<v2::Framing> = server_addr.connect().await?.into();
+            let mut conn = server_addr.connect().await?;
+            if let Some(proxy_header) = proxy_header {
+                proxy::Connector::new().connect_to(&mut conn, proxy_header.original_source, proxy_header.original_destination)
+                .await
+                .expect("Cannot send proxy header");
+            };
+            let mut conn: Connection<v2::Framing> = conn.into();
 
             // Initialize server connection
             conn.send(
@@ -240,7 +247,34 @@ async fn test_v2server_full() {
     let mut v2server_quit = v2server.quit_channel();
 
     tokio::spawn(v2server.run());
-    test_v2_client(&addr_v2).await;
+    test_v2_client(&addr_v2, &None).await;
+
+    // Signal the server to shut down
+    let _ = v2server_quit.try_send(());
+    // TODO kill v1 test server
+}
+
+#[tokio::test]
+async fn test_v2server_full_with_proxy() {
+    let addr_v1 = Address::from_str("stratum.slushpool.com:3333")
+        .expect("BUG: cannot build stratum v1 address");
+    let addr_v2 = Address(ADDR.into(), PORT_V2_WITH_PROXY);
+
+    let v2server = server::ProxyServer::listen(
+        addr_v2.clone(),
+        addr_v1,
+        server::handle_connection,
+        None,
+        server::ProxyConfig{proxy_protocol_v1: true, pass_proxy_protocol_v1: false},
+    )
+    .expect("BUG: Could not bind v2server");
+    let mut v2server_quit = v2server.quit_channel();
+
+    tokio::spawn(v2server.run());
+    let original_source: Option<SocketAddr> = "127.0.0.10:1234".parse().ok();
+    let original_destination: Option<SocketAddr> = "127.0.0.20:5678".parse().ok();
+    let proxy_info: proxy::ProxyInfo = (original_source, original_destination).try_into().expect("BUG: invalid addresses");
+    test_v2_client(&addr_v2, &Some(proxy_info)).await;
 
     // Signal the server to shut down
     let _ = v2server_quit.try_send(());

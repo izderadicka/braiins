@@ -279,10 +279,10 @@ impl SecurityContext {
 #[derive(Debug, Clone, Copy)]
 pub struct ProxyConfig {
     /// Expects PROXY protocol header on downstream connection
-    proxy_protocol_v1: bool,
+    pub proxy_protocol_v1: bool,
     /// If proxy protocol information is available from downstream connection,
     /// passes it to upstream connection
-    pass_proxy_protocol_v1: bool,
+    pub pass_proxy_protocol_v1: bool,
 }
 
 impl Default for ProxyConfig {
@@ -350,8 +350,6 @@ where
 
     /// Handle incoming connection without PROXY protocol
     async fn do_handle_direct(self) -> Result<()> {
-        // TODO - here we should accept Proxy protocol
-
         let v2_peer_addr = self.v2_downstream_conn.peer_addr()?;
 
         // Connect to upstream V1 server
@@ -362,7 +360,6 @@ where
         // peer address
         let v1_conn = v1_client.next().await?;
 
-        // TODO: here we can send PROXY header upstream
         let v1_peer_addr = v1_conn.peer_addr()?;
         let v1_framed_stream = Connection::<v1::Framing>::new(v1_conn).into_inner();
         info!(
@@ -370,8 +367,6 @@ where
             v1_peer_addr, v2_peer_addr
         );
 
-        // TODO:   Now we need to either pass ProxyProtocol here (then both method should be generic)
-        //          or FramedParts - which is probably easier
         let v2_framed_stream = match self.security_context {
             // Establish noise responder and run the handshake
             Some(security_context) => {
