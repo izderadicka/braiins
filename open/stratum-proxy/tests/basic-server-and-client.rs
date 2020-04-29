@@ -224,15 +224,15 @@ async fn test_v2_client(server_addr: &Address, proxy_header: &Option<proxy::Prox
             .await
             .expect("BUG: Could not send message");
 
-            let _response = conn
+            let response = conn
                 .next()
                 .await
                 .expect("should get response message")
                 .map_err(|e| panic!("Got response error {}", e))
                 .unwrap();
-            // TODO: test correct response message
-            // response.accept(&test_utils::v2::TestIdentityHandler);
-
+            
+            // TODO: better test of response message - was response.accept(&test_utils::v2::TestIdentityHandler);
+            assert_eq!(v2::messages::MessageType::SetupConnectionSuccess as u8, response.header.msg_type);
             Result::<(), Error>::Ok(())
         }
     })
